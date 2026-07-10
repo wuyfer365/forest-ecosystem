@@ -1,0 +1,2043 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🌲 森林生态模拟</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+      background: linear-gradient(135deg, #1a2a1a 0%, #2d3d2d 100%);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .game-container {
+      background: #2d3d2d;
+      padding: 20px;
+      border-radius: 16px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+      display: flex;
+      flex-direction: row;
+      align-items: flex-start;
+      gap: 14px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    canvas {
+      display: block;
+      border-radius: 8px;
+      cursor: crosshair;
+      box-shadow: inset 0 0 30px rgba(0,0,0,0.3);
+    }
+    .controls {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 12px;
+      margin-top: 16px;
+      flex-wrap: wrap;
+    }
+    .controls button {
+      padding: 8px 22px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      color: #fff;
+      letter-spacing: 0.5px;
+    }
+    .controls button:hover {
+      transform: translateY(-2px);
+      filter: brightness(1.15);
+    }
+    .controls button:active {
+      transform: translateY(0);
+    }
+    .btn-start {
+      background: #27ae60;
+    }
+    .btn-start.paused {
+      background: #e67e22;
+    }
+    .btn-reset {
+      background: #c0392b;
+    }
+    .controls .hint {
+      color: #8a9a8a;
+      font-size: 13px;
+      margin-left: 4px;
+    }
+    .canvas-wrapper { position: relative; }
+
+    /* ---- 右侧面板 ---- */
+    .right-sidebar {
+      width: 280px;
+      min-width: 280px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .right-sidebar .panel-box {
+      background: rgba(0,0,0,0.25);
+      border-radius: 6px;
+      border: 1px solid #4d6d4d;
+      padding: 6px 10px;
+    }
+    .right-sidebar .panel-box .title {
+      font-weight: 700; font-size: 13px; color: #8bc34a;
+      margin-bottom: 4px; letter-spacing: 0.5px;
+    }
+
+    /* 数据行 */
+    .stat-row {
+      display: flex; justify-content: space-between;
+      padding: 1px 0; color: #ccc; font-size: 12px;
+    }
+    .stat-row .value { font-weight: 600; }
+    .stat-row .val-tiger { color: #e67e22; }
+    .stat-row .val-deer  { color: #d4a056; }
+    .stat-row .val-sheep { color: #e0e0e0; }
+    .stat-row .val-plant { color: #4caf50; }
+    .click-hint { font-size: 11px; color: #888; margin-top: 3px; padding-top: 3px; border-top: 1px solid rgba(255,255,255,0.06); }
+
+    /* 音效 */
+    .sound-toggle {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 12px; cursor: pointer; color: #aaa; user-select: none;
+    }
+    .sound-toggle:hover { color: #ddd; }
+    .sound-toggle input[type="checkbox"] { accent-color: #8bc34a; width: 14px; height: 14px; cursor: pointer; }
+
+    /* 设置按钮（始终可见） */
+    .settings-toggle {
+      background: #2d5a2d; color: #ddd;
+      border: 1px solid #5d8d5d; border-radius: 5px;
+      padding: 5px 0; font-size: 12px; font-weight: 600;
+      cursor: pointer; width: 100%; text-align: center;
+    }
+    .settings-toggle:hover { background: #3d7a3d; color: #fff; border-color: #8bc34a; }
+    .settings-toggle.active { background: #3a6a3a; border-color: #8bc34a; color: #8bc34a; }
+
+    /* 设置面板 */
+    .settings-panel { display: none; padding: 2px 4px; }
+    .settings-panel.open { display: block; }
+    .settings-section {
+      display: flex; align-items: center; gap: 3px;
+      margin: 2px 0; width: 100%;
+    }
+    .settings-section .slabel { color: #aaa; font-size: 10px; min-width: 36px; white-space: nowrap; }
+    .settings-section .svalue { color: #8bc34a; font-size: 11px; font-weight: 600; min-width: 40px; text-align: right; white-space: nowrap; padding-right: 2px; }
+    .settings-section .sunit { color: #777; font-size: 9px; white-space: nowrap; }
+
+    /* 滑条 */
+    .settings-section input[type="range"] {
+      -webkit-appearance: none; appearance: none;
+      width: 70px; min-width: 0; max-width: 70px;
+      flex: 0 0 auto; height: 3px; border-radius: 2px;
+      background: #4d6d4d; outline: none; cursor: pointer;
+      margin: 0; padding: 0;
+    }
+    .settings-section input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none; appearance: none;
+      width: 12px; height: 12px; border-radius: 50%;
+      background: #8bc34a; cursor: pointer;
+    }
+    .settings-section input[type="range"]::-moz-range-thumb {
+      width: 12px; height: 12px; border-radius: 50%; background: #8bc34a; border: none; cursor: pointer;
+    }
+
+    /* 预设按钮 */
+    .preset-group { display: flex; gap: 3px; flex-wrap: wrap; }
+    .preset-btn {
+      padding: 2px 6px; border: 1px solid #5d7d5d; border-radius: 8px;
+      background: transparent; color: #aaa; font-size: 9px; cursor: pointer;
+    }
+    .preset-btn:hover { border-color: #8bc34a; color: #ddd; }
+    .preset-btn.active { background: #3a6a3a; border-color: #8bc34a; color: #8bc34a; font-weight: 600; }
+    .separator { border: none; border-top: 1px solid #4d6d4d; margin: 3px 0; }
+
+    /* 初始数量输入 */
+    .init-input { width: 44px; padding: 2px 4px; border-radius: 3px; border: 1px solid #5d7d5d; background: #2d3d2d; color: #eee; font-size: 11px; text-align: center; }
+
+    /* 底部控制栏 */
+    .controls {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+      margin-top: 12px;
+      flex-wrap: wrap;
+    }
+    .controls button {
+      padding: 7px 18px; border: none; border-radius: 6px;
+      font-size: 13px; font-weight: 600; cursor: pointer;
+      transition: all 0.2s ease; color: #fff; letter-spacing: 0.3px;
+    }
+    .controls button:hover { transform: translateY(-1px); filter: brightness(1.12); }
+    .controls button:active { transform: translateY(0); }
+    .btn-start { background: #27ae60; }
+    .btn-start.paused { background: #e67e22; }
+    .btn-reset { background: #c0392b; }
+    .control-hint { color: #6a8a6a; font-size: 11px; }
+    .status-msg { color: #6a8a6a; font-size: 12px; text-align: center; margin-top: 8px; min-height: 18px; }
+  </style>
+</head>
+<body>
+<div class="game-container">
+  <div class="canvas-wrapper">
+    <canvas id="ecosystemCanvas" width="800" height="600"></canvas>
+  </div>
+
+  <!-- 右侧面板 -->
+  <div class="right-sidebar">
+    <!-- 生态数据 -->
+    <div class="panel-box">
+      <div class="title">🌳 生态数据</div>
+      <div class="stat-row"><span>🐯 老虎</span><span class="value val-tiger" id="statTiger">0</span></div>
+      <div class="stat-row" style="font-size:11px;color:#888;"><span>状态</span><span id="tigerState">-</span></div>
+      <div class="stat-row"><span>🦌 鹿</span><span class="value val-deer" id="statDeer">0</span></div>
+      <div class="stat-row"><span>🐑 羊</span><span class="value val-sheep" id="statSheep">0</span></div>
+      <div class="stat-row"><span>🌿 植物</span><span class="value val-plant" id="statPlant">0</span></div>
+      <div class="click-hint">点击地图加鹿：<span id="clickCount">5</span>/5 次</div>
+    </div>
+
+    <!-- 音效开关 -->
+    <div class="panel-box">
+      <label class="sound-toggle">
+        <input type="checkbox" id="soundCheck" checked> 🔊 音效
+      </label>
+    </div>
+
+    <!-- 设置按钮 -->
+    <button class="settings-toggle" id="btnSettings">⚙ 展开参数设置</button>
+
+    <!-- 设置面板 -->
+    <div class="settings-panel" id="settingsPanel">
+      <div class="settings-section">
+        <span class="slabel">🎯预设</span>
+        <div class="preset-group">
+          <button class="preset-btn active" data-preset="natural">🌱自然</button>
+          <button class="preset-btn" data-preset="tiger">🐯虎强</button>
+          <button class="preset-btn" data-preset="prey">🦌猎物强</button>
+        </div>
+      </div>
+      <hr class="separator">
+      <div class="settings-section">
+        <span class="slabel">🐯繁殖</span>
+        <input type="range" id="slBreed" min="1" max="15" value="3">
+        <span class="svalue" id="valBreed">0.03</span>
+      </div>
+      <div class="settings-section">
+        <span class="slabel">🐯冲刺</span>
+        <input type="range" id="slSprint" min="8" max="25" value="15">
+        <span class="svalue" id="valSprint">15</span><span class="sunit">tk</span>
+      </div>
+      <div class="settings-section">
+        <span class="slabel">🦌猎物速度</span>
+        <input type="range" id="slPreySpeed" min="6" max="14" value="10">
+        <span class="svalue" id="valPreySpeed">1.0</span><span class="sunit">×</span>
+      </div>
+      <div class="settings-section">
+        <span class="slabel">🦌逃跑加速</span>
+        <input type="range" id="slFleeSpeed" min="10" max="25" value="12">
+        <span class="svalue" id="valFleeSpeed">1.2</span><span class="sunit">×</span>
+      </div>
+      <div class="settings-section">
+        <span class="slabel">⏱速度</span>
+        <input type="range" id="slSpeed" min="1" max="20" value="1">
+        <span class="svalue" id="valSpeed">1</span><span class="sunit">×</span>
+      </div>
+      <div class="settings-section">
+        <span class="slabel">🌿再生</span>
+        <input type="range" id="slRegrow" min="2" max="12" value="5">
+        <span class="svalue" id="valRegrow">5</span><span class="sunit">s</span>
+      </div>
+      <hr class="separator">
+      <div class="settings-section" style="flex-wrap:wrap;">
+        <span class="slabel" style="min-width:100%;">🐯🦌🐑🌿 初始数量（重置生效）</span>
+        <span style="display:flex;gap:4px;align-items:center;flex-wrap:wrap;margin-top:2px;">
+          <span style="color:#e67e22;font-size:11px;">🐯</span>
+          <input class="init-input" id="cfgTigers" type="number" min="0" max="30" value="3">
+          <span style="color:#d4a056;font-size:11px;">🦌</span>
+          <input class="init-input" id="cfgDeers" type="number" min="0" max="60" value="20">
+          <span style="color:#e0e0e0;font-size:11px;">🐑</span>
+          <input class="init-input" id="cfgSheeps" type="number" min="0" max="60" value="25">
+          <span style="color:#4caf50;font-size:11px;">🌿</span>
+          <input class="init-input" id="cfgPlants" type="number" min="0" max="200" value="120">
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 底部控制栏（横跨两列） -->
+  <div style="width:100%;">
+    <div class="controls">
+      <button class="btn-start" id="btnStart">▶ 开始模拟</button>
+      <button class="btn-reset" id="btnReset">↻ 重置</button>
+      <span class="control-hint">💡 点击地图可放鹿</span>
+    </div>
+    <div class="status-msg" id="statusMsg">就绪 · 🐯4 🦌12 🐑15 🌿80</div>
+  </div>
+</div>
+
+<script>
+/**
+ * ============================================
+ * 森林生态模拟 — 核心 JS
+ * ============================================
+ * 架构：Creature 基类 → Tiger / Deer / Sheep
+ *        Plant、Ecosystem、Renderer、主程序
+ * 循环周期：300ms
+ * 捕食距离：< 20px
+ * 繁殖条件：数量>5 且存活>5秒 → 30%
+ * 植物上限：100，被吃后5秒再生
+ * ============================================
+ */
+
+// ============================================
+// 配置常量 — 自然生态参数
+// ============================================
+const CONFIG = {
+  WIDTH: 800,
+  HEIGHT: 600,
+  TICK_MS: 300,                       // 生态更新周期
+
+  // ---- 捕食 ----
+  PREDATION_DIST: 25,
+  EAT_PLANT_DIST: 15,
+  BURST_RANGE: 55,
+  EAT_HP_THRESHOLD: 0.8,          // HP < 80% 时才主动吃植物
+
+  // ---- 老虎（顶级掠食者） ----
+  TIGER_WALK_SPEED: 2.0,
+  TIGER_SPRINT_SPEED: 6.8,           // 6.8：能捕羊(17.4tick<18)，捕不到鹿(18.6>18)
+  TIGER_BURST_SPEED: 8.5,
+  TIGER_SPRINT_THRESHOLD: 100,       // ↓ 130→100 更近才冲刺，省耐力留给追击
+  TIGER_SPRINT_DURATION: 16,         // 冲刺耐力（让鹿刚好逃掉）
+  TIGER_COOLDOWN_DURATION: 70,       // ↑ 失败后休息更久，猎物有喘息时间
+  TIGER_HUNGER_RATE: 0.5,            // ↓ 饿得更慢，吃一顿管更久
+  TIGER_HUNTER_THRESHOLD: 80,        // ↑ 更饿了才去捕猎（减少猎杀频率）
+  TIGER_MAX_HUNGER: 100,
+  TIGER_DETECT_RANGE: 300,
+  TIGER_EAT_HEAL: 15,              // 进食恢复 HP（测试最佳10~15之间）
+  TIGER_BREED_MIN_COUNT: 2,       // ≥3只开始繁殖
+  TIGER_BREED_MIN_AGE_MS: 30000,  // 30秒性成熟（慢）
+  TIGER_BREED_CHANCE: 0.01,       // 1%/tick
+  TIGER_MAX_AGE_MS: 180000,       // 约3分钟寿命
+
+  // ---- 鹿（K策略：警觉、快速、代谢快） ----
+  DEER_SPEED: 3.0,
+  DEER_SPEED_BASE: 3.0,
+  DEER_FLEE_RANGE: 95,
+  DEER_HERD_RANGE: 200,
+  DEER_HP_LOSS: 0.6,              // 代谢快消耗大
+  DEER_BREED_MIN_COUNT: 2,
+  DEER_BREED_MIN_AGE_MS: 12000,   // 12秒成熟
+  DEER_BREED_CHANCE: 0.05,        // 5%/tick
+  DEER_MAX_AGE_MS: 120000,        // 约2分钟寿命
+
+  // ---- 羊（R策略：耐饿、快繁殖、迟钝） ----
+  SHEEP_SPEED: 2.8,
+  SHEEP_SPEED_BASE: 2.8,
+  SHEEP_FLEE_RANGE: 85,
+  SHEEP_HERD_RANGE: 150,
+  SHEEP_HP_LOSS: 0.3,             // 代谢慢耐饿
+  SHEEP_BREED_MIN_COUNT: 2,
+  SHEEP_BREED_MIN_AGE_MS: 10000,  // 10秒成熟
+  SHEEP_BREED_CHANCE: 0.06,       // 6%/tick
+  SHEEP_MAX_AGE_MS: 105000,       // 约1.75分钟寿命
+
+  // ---- 逃跑爆发 ----
+  FLEE_SPEED_MULT: 1.2,              // ↓ 1.6→1.2 降低逃亡倍率，让老虎有机会追上
+
+  // ---- 植物 ----
+  MAX_PLANTS: 200,
+  PLANT_REGROW_MS: 5000,
+  PLANT_MIN_COUNT: 80,
+
+  // ---- 交互 ----
+  DAY_MS: 30000,
+  MAX_CLICKS_PER_DAY: 5,
+
+  // ---- 初始种群 ----
+  TIGER_COUNT_INIT: 3,
+  DEER_COUNT_INIT: 20,
+  SHEEP_COUNT_INIT: 25,
+  PLANT_COUNT_INIT: 120,
+};
+
+// -------- 工具函数 --------
+const Utils = {
+  /** 两点距离 */
+  dist(x1, y1, x2, y2) {
+    return Math.hypot(x2 - x1, y2 - y1);
+  },
+  /** [min, max) 随机整数 */
+  randInt(min, max) {
+    return Math.floor(Math.random() * (max - min)) + min;
+  },
+  /** [min, max) 随机浮点 */
+  randFloat(min, max) {
+    return Math.random() * (max - min) + min;
+  },
+  /** 唯一 ID 生成 */
+  uid() {
+    return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  },
+};
+
+// =============================================
+// SoundManager 音效管理（Web Audio API 合成，无需外部文件）
+// =============================================
+class SoundManager {
+  constructor() { this.ctx = null; this.enabled = true; }
+  /** 延迟初始化 AudioContext（需用户交互后创建） */
+  _init() { if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)(); }
+  /** 切换开关 */
+  toggle() { this.enabled = !this.enabled; return this.enabled; }
+
+  /** 主播放方法 */
+  play(type) {
+    if (!this.enabled) return;
+    try {
+      this._init();
+      if (this.ctx.state === 'suspended') this.ctx.resume();
+      const m = this[`_${type}`];
+      if (m) m.call(this);
+    } catch (e) { /* 静默降级 */ }
+  }
+
+  /** 🐯 老虎咆哮 — 1.5秒真实虎啸（4层合成） */
+  _tigerSprint() {
+    const c = this.ctx, t = c.currentTime;
+    // 层1: 主吼（低频锯齿波咆哮）
+    const o1 = c.createOscillator(); o1.type = 'sawtooth';
+    o1.frequency.setValueAtTime(90, t); o1.frequency.exponentialRampToValueAtTime(40, t + 0.8);
+    o1.frequency.linearRampToValueAtTime(25, t + 1.4);
+    const g1 = c.createGain(); g1.gain.setValueAtTime(0.2, t); g1.gain.setValueAtTime(0.2, t + 0.15);
+    g1.gain.exponentialRampToValueAtTime(0.01, t + 1.5);
+    o1.connect(g1); g1.connect(c.destination); o1.start(t); o1.stop(t + 1.5);
+    // 层2: 喉音低频震动
+    const o2 = c.createOscillator(); o2.type = 'sine';
+    o2.frequency.setValueAtTime(50, t); o2.frequency.linearRampToValueAtTime(20, t + 1.2);
+    const g2 = c.createGain(); g2.gain.setValueAtTime(0.12, t);
+    g2.gain.setValueAtTime(0.12, t + 0.2); g2.gain.exponentialRampToValueAtTime(0.01, t + 1.3);
+    o2.connect(g2); g2.connect(c.destination); o2.start(t); o2.stop(t + 1.4);
+    // 层3: 嘶吼粗糙感（方波）
+    const o3 = c.createOscillator(); o3.type = 'square';
+    o3.frequency.setValueAtTime(65, t); o3.frequency.linearRampToValueAtTime(30, t + 0.8);
+    const g3 = c.createGain(); g3.gain.setValueAtTime(0.08, t);
+    g3.gain.exponentialRampToValueAtTime(0.01, t + 0.9);
+    o3.connect(g3); g3.connect(c.destination); o3.start(t); o3.stop(t + 1.0);
+    // 层4：尾声低鸣
+    const o4 = c.createOscillator(); o4.type = 'sine';
+    o4.frequency.setValueAtTime(35, t + 0.9); o4.frequency.exponentialRampToValueAtTime(18, t + 1.5);
+    const g4 = c.createGain(); g4.gain.setValueAtTime(0, t); g4.gain.setValueAtTime(0.06, t + 0.9);
+    g4.gain.exponentialRampToValueAtTime(0.01, t + 1.6);
+    o4.connect(g4); g4.connect(c.destination); o4.start(t + 0.9); o4.stop(t + 1.6);
+  }
+
+  /** 🦌 鹿被猎杀 — 1.5秒哀鸣（高频滑音+颤音） */
+  _deerDeath() {
+    const c = this.ctx, t = c.currentTime;
+    const o = c.createOscillator(); o.type = 'sine';
+    o.frequency.setValueAtTime(1000, t); o.frequency.exponentialRampToValueAtTime(500, t + 0.4);
+    o.frequency.linearRampToValueAtTime(300, t + 0.8); o.frequency.linearRampToValueAtTime(150, t + 1.3);
+    // 颤音 LFO
+    const lfo = c.createOscillator(); lfo.type = 'sine'; lfo.frequency.value = 30;
+    const lfoG = c.createGain(); lfoG.gain.value = 80;
+    lfo.connect(lfoG); lfoG.connect(o.frequency); lfo.start(t); lfo.stop(t + 1.3);
+    const g = c.createGain(); g.gain.setValueAtTime(0.12, t);
+    g.gain.setValueAtTime(0.12, t + 0.15); g.gain.exponentialRampToValueAtTime(0.01, t + 1.4);
+    o.connect(g); g.connect(c.destination); o.start(t); o.stop(t + 1.5);
+  }
+
+  /** 🐑 羊被猎杀 — 2秒"咩~~"（辅音爆发+颤音元音） */
+  _sheepDeath() {
+    const c = this.ctx, t = c.currentTime;
+    // 辅音 "b-"（白噪声爆发）
+    const buf = c.createBuffer(1, c.sampleRate * 0.06, c.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.exp(-i / (c.sampleRate * 0.015));
+    const src = c.createBufferSource(); src.buffer = buf;
+    const gs = c.createGain(); gs.gain.setValueAtTime(0.1, t); gs.gain.exponentialRampToValueAtTime(0.01, t + 0.06);
+    src.connect(gs); gs.connect(c.destination); src.start(t);
+    // 元音 "~aa~eee"（颤音正弦波）
+    const o = c.createOscillator(); o.type = 'sine';
+    o.frequency.setValueAtTime(600, t + 0.06); o.frequency.linearRampToValueAtTime(400, t + 0.6);
+    o.frequency.linearRampToValueAtTime(250, t + 1.2); o.frequency.linearRampToValueAtTime(150, t + 1.8);
+    // 颤音 LFO（缓慢抖动制造"咩"感）
+    const lfo = c.createOscillator(); lfo.type = 'sine'; lfo.frequency.value = 20;
+    const lfoG = c.createGain(); lfoG.gain.value = 100;
+    lfo.connect(lfoG); lfoG.connect(o.frequency); lfo.start(t + 0.06); lfo.stop(t + 1.8);
+    const g = c.createGain(); g.gain.setValueAtTime(0, t); g.gain.setValueAtTime(0.14, t + 0.06);
+    g.gain.setValueAtTime(0.14, t + 0.3); g.gain.exponentialRampToValueAtTime(0.01, t + 1.9);
+    o.connect(g); g.connect(c.destination); o.start(t + 0.06); o.stop(t + 2.0);
+  }
+
+  /** 💀 捕食成功 — 闷响+骨裂（0.4秒） */
+  _kill() {
+    const c = this.ctx, t = c.currentTime;
+    // 闷响：白噪声短脉冲
+    const buf = c.createBuffer(1, c.sampleRate * 0.1, c.sampleRate);
+    const bufD = buf.getChannelData(0);
+    for (let i = 0; i < bufD.length; i++) bufD[i] = (Math.random() * 2 - 1) * Math.exp(-i / (c.sampleRate * 0.025));
+    const src = c.createBufferSource(); src.buffer = buf;
+    const g = c.createGain(); g.gain.setValueAtTime(0.18, t); g.gain.exponentialRampToValueAtTime(0.01, t + 0.1);
+    src.connect(g); g.connect(c.destination); src.start(t);
+    // 低频震动（冲击感）
+    const o = c.createOscillator(); o.type = 'sine'; o.frequency.setValueAtTime(50, t);
+    o.frequency.exponentialRampToValueAtTime(15, t + 0.35);
+    const og = c.createGain(); og.gain.setValueAtTime(0.1, t);
+    og.gain.setValueAtTime(0.1, t + 0.05); og.gain.exponentialRampToValueAtTime(0.01, t + 0.4);
+    o.connect(og); og.connect(c.destination); o.start(t); o.stop(t + 0.4);
+  }
+
+  /** 🌿 吃草（轻柔嚼碎，0.3秒） */
+  _eat() {
+    const c = this.ctx, t = c.currentTime;
+    for (let i = 0; i < 3; i++) {
+      const o = c.createOscillator(); o.type = 'sine';
+      o.frequency.setValueAtTime(700 + Math.random() * 500, t + i * 0.08);
+      const g = c.createGain(); g.gain.setValueAtTime(0.02, t + i * 0.08);
+      g.gain.exponentialRampToValueAtTime(0.01, t + i * 0.08 + 0.07);
+      o.connect(g); g.connect(c.destination); o.start(t + i * 0.08); o.stop(t + i * 0.08 + 0.07);
+    }
+  }
+
+  /** 测试音 */
+  _test() { this._tigerSprint(); }
+}
+const SOUND = new SoundManager();
+
+// =============================================
+// 生物基类 Creature — 含动画属性
+// =============================================
+class Creature {
+  /**
+   * @param {string} type   — 'tiger' | 'deer' | 'sheep'
+   * @param {number} x, y   — 初始坐标
+   * @param {object} opts   — { color, speed, hp, maxHp, size, symbol }
+   */
+  constructor(type, x, y, opts = {}) {
+    this.id = Utils.uid();
+    this.type = type;                       // 生物类型标识
+    this.alive = true;
+    this.x = x;
+    this.y = y;
+    this.color = opts.color || '#fff';
+    this.size = opts.size || 7;             // 渲染尺寸
+    this.speed = opts.speed || 1;           // 每 tick 移动像素
+    this.hp = opts.hp || 100;
+    this.maxHp = opts.maxHp || 100;
+    this.symbol = opts.symbol || 'circle';  // 'circle' | 'square'
+    this.age = 0;                           // 存活时间 (ms)
+    this.birthTime = Date.now();
+    this.maxAge = opts.maxAge || Infinity;   // 寿命上限（ms），超时老死
+    // ---- 动画状态 ----
+    this.animFrame = 0;          // 动画帧计数
+    this.legPhase = 0;           // 腿相位 0-1
+    this.isEating = false;       // 正在吃草
+    this.eatTimer = 0;           // 吃草动画计时
+    this.prevX = x;              // 上一 tick 位置（用于算速度）
+    this.prevY = y;
+  }
+
+  /** 是否存活 */
+  isAlive() { return this.alive; }
+
+  /** 受伤 */
+  takeDamage(amount) {
+    this.hp = Math.max(0, this.hp - amount);
+    if (this.hp <= 0) this.alive = false;
+  }
+
+  /** 治疗 */
+  heal(amount) {
+    this.hp = Math.min(this.maxHp, this.hp + amount);
+  }
+
+  /** 严格边界：永远不出地图（保险范围5px，杜绝出界） */
+  move(dx, dy) {
+    this.prevX = this.x; this.prevY = this.y;
+    this.x += dx;
+    this.y += dy;
+    // 强制限制在地图内（宁可推到里面也不能出去）
+    const M = 5;
+    this.x = Math.min(Math.max(this.x, M), CONFIG.WIDTH - M);
+    this.y = Math.min(Math.max(this.y, M), CONFIG.HEIGHT - M);
+    // 动画更新：根据移动距离推进腿相位
+    const dist = Math.hypot(dx, dy);
+    if (dist > 0.3) {
+      this.animFrame++;
+      this.legPhase = (this.legPhase + dist * 0.12) % (Math.PI * 2);
+    }
+    // 吃草计时
+    if (this.isEating) {
+      this.eatTimer--;
+      if (this.eatTimer <= 0) this.isEating = false;
+    }
+  }
+
+  /** 朝目标点移动 speed 距离 */
+  moveToward(tx, ty, spd) {
+    const d = Utils.dist(this.x, this.y, tx, ty);
+    if (d < 1) return;
+    const dx = ((tx - this.x) / d) * spd;
+    const dy = ((ty - this.y) / d) * spd;
+    this.move(dx, dy);
+  }
+
+  /** 远离目标点 */
+  moveAwayFrom(tx, ty, spd) {
+    const d = Utils.dist(this.x, this.y, tx, ty);
+    if (d < 1) return;
+    const dx = ((this.x - tx) / d) * spd;
+    const dy = ((this.y - ty) / d) * spd;
+    this.move(dx, dy);
+  }
+
+  /**
+   * 智能逃跑 — 沿墙滑行 + 角落恐慌冲刺 + 边界指数排斥
+   * 防止猎物被老虎堵在角落吃掉
+   */
+  smartFlee(tx, ty, spd, W, H) {
+    const d = Utils.dist(this.x, this.y, tx, ty);
+    if (d < 1) return;
+
+    // ---- 角落恐慌：如果离两面墙都很近，直接朝中心冲刺 ----
+    const distLeft = this.x, distRight = W - this.x;
+    const distTop = this.y, distBottom = H - this.y;
+    const nearestWalls = [distLeft, distRight, distTop, distBottom].sort((a, b) => a - b);
+    if (nearestWalls[0] < 25 && nearestWalls[1] < 40) {
+      // 被困在角落！直接朝地图中心全速逃跑
+      const cx = W / 2, cy = H / 2;
+      const ca = Math.atan2(cy - this.y, cx - this.x);
+      this.move(Math.cos(ca) * spd * 1.3, Math.sin(ca) * spd * 1.3);
+      return;
+    }
+
+    // ---- 1. 主方向：远离老虎 ----
+    let angle = Math.atan2(this.y - ty, this.x - tx);
+
+    // ---- 2. 墙壁检测：如果逃跑方向会撞墙，改为沿墙滑行 ----
+    const margin = 70;
+    const hitLeft = this.x < margin && Math.cos(angle) < -0.2;
+    const hitRight = this.x > W - margin && Math.cos(angle) > 0.2;
+    const hitTop = this.y < margin && Math.sin(angle) < -0.2;
+    const hitBottom = this.y > H - margin && Math.sin(angle) > 0.2;
+
+    if (hitLeft || hitRight) {
+      // 改为沿 Y 轴滑行（向上或向下，选远离老虎的方向）
+      angle = Math.sin(angle) > 0 ? Math.PI / 2 : -Math.PI / 2;
+      // 如果朝上/下也是墙，则朝对角线
+      if ((hitTop && Math.sin(angle) < 0) || (hitBottom && Math.sin(angle) > 0)) {
+        angle = hitLeft ? Math.PI / 4 : -Math.PI / 4;
+      }
+    } else if (hitTop || hitBottom) {
+      // 改为沿 X 轴滑行
+      angle = Math.cos(angle) > 0 ? 0 : Math.PI;
+      if ((hitLeft && Math.cos(angle) < 0) || (hitRight && Math.cos(angle) > 0)) {
+        angle = hitTop ? Math.PI / 4 : -Math.PI / 4;
+      }
+    } else {
+      // ---- 3. 不在墙边时：边界指数排斥（越近推力越大） ----
+      const edgeX = Math.max(0, margin - this.x) - Math.max(0, this.x - (W - margin));
+      const edgeY = Math.max(0, margin - this.y) - Math.max(0, this.y - (H - margin));
+      const edgeDist = Math.hypot(edgeX, edgeY) / margin;
+      if (edgeDist > 0.01) {
+        const edgeAngle = Math.atan2(-edgeY, -edgeX);
+        // 指数级混合：越靠近边缘，排斥占比越大（1.0 = 完全朝向中心）
+        const blend = Math.pow(edgeDist, 1.5);
+        angle = angle * (1 - blend) + edgeAngle * blend;
+      }
+    }
+
+    // ---- 4. 随机散开，防止全往同一处跑 ----
+    angle += (Math.random() - 0.5) * 0.6;
+
+    // ---- 5. 移动 ----
+    this.move(Math.cos(angle) * spd, Math.sin(angle) * spd);
+  }
+
+  /** 随机漫游 */
+  wander() {
+    const angle = Math.random() * Math.PI * 2;
+    this.move(Math.cos(angle) * this.speed, Math.sin(angle) * this.speed);
+  }
+
+  /** 带偏好的随机移动（偏转角度内的随机方向） */
+  moveRandom(biasAngle, spread) {
+    const angle = biasAngle + (Math.random() - 0.5) * spread;
+    this.move(Math.cos(angle) * this.speed, Math.sin(angle) * this.speed);
+  }
+}
+
+// =============================================
+// Tiger 老虎 — 自然界的伏击猎手
+// 行为状态机: IDLE → STALK → SPRINT → COOLDOWN
+// 潜行接近 → 冲刺追击 → 爆发扑击 → 喘息恢复
+// =============================================
+class Tiger extends Creature {
+  constructor(x, y) {
+    super('tiger', x, y, {
+      color: '#e67e22', speed: CONFIG.TIGER_WALK_SPEED,
+      hp: 100, maxHp: 100,
+      size: 12, symbol: 'square',
+      maxAge: CONFIG.TIGER_MAX_AGE_MS,
+    });
+    this.state = 'IDLE';                 // 状态机
+    this.sprintTicks = 0;
+    this.cooldownTicks = 0;
+    this.target = null;
+    this.hunger = 50;
+    // --- 智能寻路 ---
+    this.lastKnownPrey = null;           // {x, y, tick} 上次看到猎物的位置
+    this.searchTarget = null;            // {x, y} 当前搜索目标点
+    this.searchTimer = 0;
+  }
+
+  updateHunger() {
+    this.hunger = Math.min(CONFIG.TIGER_MAX_HUNGER, this.hunger + CONFIG.TIGER_HUNGER_RATE);
+    if (this.hunger >= CONFIG.TIGER_MAX_HUNGER) { this.takeDamage(1); return true; }
+    return false;
+  }
+  feed() { this.hunger = 0; this.heal(CONFIG.TIGER_EAT_HEAL); }
+  isHungry() { return this.hunger >= CONFIG.TIGER_HUNTER_THRESHOLD; }
+
+  /**
+   * 老虎智能狩猎 — 主动搜索+记忆追踪
+   */
+  hunt(preyList) {
+    const alive = preyList.filter(p => p.alive);
+    if (alive.length === 0) { this._searchMap(); return; }
+
+    // 找最近猎物，更新记忆
+    let nearest = null, minD = Infinity;
+    for (const p of alive) {
+      const d = Utils.dist(this.x, this.y, p.x, p.y);
+      if (d < minD) { minD = d; nearest = p; }
+    }
+    this.target = nearest;
+    // 记下猎物位置（即使在远处也能感知方向）
+    if (nearest) this.lastKnownPrey = { x: nearest.x, y: nearest.y, tick: this.age };
+
+    // 即使猎物很远（>300px），只要饿就朝猎物方向搜索
+    if (this.isHungry() && minD > CONFIG.TIGER_DETECT_RANGE) {
+      this.moveToward(nearest.x, nearest.y, CONFIG.TIGER_WALK_SPEED * 1.2);
+      return;
+    }
+
+    switch (this.state) {
+      case 'IDLE':      this._doIdle(minD); break;
+      case 'STALK':     this._doStalk(minD); break;
+      case 'SPRINT':    this._doSprint(minD); break;
+      case 'COOLDOWN':  this._doCooldown(minD); break;
+    }
+  }
+
+  /** 地图搜索：没猎物时主动扫描全图 */
+  _searchMap() {
+    // 如果记得上次猎物位置，去那里看看
+    if (this.lastKnownPrey && this.age - this.lastKnownPrey.tick < 500) {
+      this.moveToward(this.lastKnownPrey.x, this.lastKnownPrey.y, CONFIG.TIGER_WALK_SPEED * 1.2);
+      return;
+    }
+    // 否则做网格搜索：轮流走向地图各区域
+    if (!this.searchTarget || this.searchTimer <= 0 ||
+        Math.hypot(this.x - this.searchTarget.x, this.y - this.searchTarget.y) < 30) {
+      // 选择下一个搜索点（偏向地图中心区域，猎物通常更多）
+      const cx = CONFIG.WIDTH / 2, cy = CONFIG.HEIGHT / 2;
+      this.searchTarget = {
+        x: cx + (Math.random() - 0.5) * CONFIG.WIDTH * 0.6,
+        y: cy + (Math.random() - 0.5) * CONFIG.HEIGHT * 0.6,
+      };
+      this.searchTimer = 80 + Math.random() * 60;
+    }
+    this.searchTimer--;
+    this.moveToward(this.searchTarget.x, this.searchTarget.y, CONFIG.TIGER_WALK_SPEED);
+  }
+
+  _doIdle(dist) {
+    if (this.isHungry() && dist < CONFIG.TIGER_DETECT_RANGE) {
+      this.state = 'STALK'; this._doStalk(dist);
+    } else if (this.isHungry()) {
+      // 饿但猎物远 → 朝猎物方向搜索
+      if (this.target) this.moveToward(this.target.x, this.target.y, CONFIG.TIGER_WALK_SPEED * 1.2);
+      else this._searchMap();
+    } else {
+      this.wander();
+    }
+  }
+
+  _doStalk(dist) {
+    if (!this.target) { this.state = 'IDLE'; this._searchMap(); return; }
+    if (dist < CONFIG.TIGER_SPRINT_THRESHOLD) {
+      this.state = 'SPRINT'; this.sprintTicks = 0; SOUND.play('tigerSprint');
+      this._doSprint(dist); return;
+    }
+    this.moveToward(this.target.x, this.target.y, CONFIG.TIGER_WALK_SPEED);
+  }
+
+  _doSprint(dist) {
+    this.sprintTicks++;
+    if (this.sprintTicks > CONFIG.TIGER_SPRINT_DURATION) {
+      this.state = 'COOLDOWN'; this.cooldownTicks = CONFIG.TIGER_COOLDOWN_DURATION; return;
+    }
+    const spd = dist < CONFIG.BURST_RANGE ? CONFIG.TIGER_BURST_SPEED : CONFIG.TIGER_SPRINT_SPEED;
+    if (this.target) this.moveToward(this.target.x, this.target.y, spd);
+    else { this.state = 'IDLE'; this._searchMap(); }
+  }
+
+  _doCooldown(dist) {
+    this.cooldownTicks--;
+    if (this.cooldownTicks <= 0) { this.state = this.isHungry() ? 'STALK' : 'IDLE'; return; }
+    // 喘息时也慢慢朝猎物方向移动
+    if (this.target) this.moveToward(this.target.x, this.target.y, CONFIG.TIGER_WALK_SPEED * 0.6);
+    else if (this.lastKnownPrey) this.moveToward(this.lastKnownPrey.x, this.lastKnownPrey.y, CONFIG.TIGER_WALK_SPEED * 0.5);
+    else this.wander();
+  }
+}
+
+// =============================================
+// Deer 鹿 — 快速、警觉、群居
+// =============================================
+class Deer extends Creature {
+  constructor(x, y) {
+    super('deer', x, y, {
+      color: '#CD853F', speed: CONFIG.DEER_SPEED,
+      hp: 80, maxHp: 80, size: 8, symbol: 'circle',
+      maxAge: CONFIG.DEER_MAX_AGE_MS,
+    });
+  }
+
+  /**
+   * 鹿的行为：发现老虎→逃跑 | 否则觅食+聚群
+   */
+  graze(tigers, allDeers, plants) {
+    const fleeRange = CONFIG.DEER_FLEE_RANGE * (CONFIG.FLEE_SPEED_MULT / 1.6);
+    const threat = this._nearestThreat(tigers, fleeRange);
+    if (threat) {
+      this.smartFlee(threat.x, threat.y, this.speed * CONFIG.FLEE_SPEED_MULT, CONFIG.WIDTH, CONFIG.HEIGHT);
+      return;
+    }
+    // 预警：附近同伴快速移动时跟随
+    for (const other of allDeers) {
+      if (other === this || !other.alive) continue;
+      const od = Math.hypot(other.x - this.x, other.y - this.y);
+      if (od < fleeRange * 0.5 && Math.hypot(other.x - other.prevX, other.y - other.prevY) > 4) {
+        this.move((other.x - this.x) / od * this.speed * 0.6, (other.y - this.y) / od * this.speed * 0.6);
+        return;
+      }
+    }
+    this._herd(allDeers, CONFIG.DEER_HERD_RANGE, 0.25);
+    // 3. 觅食：没有植物则朝地图中心搜索（植物通常更密集）
+    const plant = this._nearestPlant(plants);
+    if (plant) {
+      this.moveToward(plant.x, plant.y, this.speed * 0.7);
+    } else {
+      this.moveToward(CONFIG.WIDTH / 2 + (Math.random() - 0.5) * 100,
+                      CONFIG.HEIGHT / 2 + (Math.random() - 0.5) * 100, this.speed * 0.6);
+    }
+  }
+
+  _herd(sameList, range, weight) {
+    let cx = 0, cy = 0, count = 0;
+    for (const other of sameList) {
+      if (other === this || !other.alive) continue;
+      const d = Utils.dist(this.x, this.y, other.x, other.y);
+      if (d < range) { cx += other.x; cy += other.y; count++; }
+    }
+    if (count > 0) { cx /= count; cy /= count; this.moveToward(cx, cy, this.speed * weight); }
+  }
+
+  _nearestThreat(tigers, fleeRange) {
+    let nearest = null, minD = Infinity;
+    for (const t of tigers) {
+      if (!t.alive) continue;
+      const d = Utils.dist(this.x, this.y, t.x, t.y);
+      if (d < fleeRange && d < minD) { minD = d; nearest = t; }
+    }
+    return nearest;
+  }
+
+  _nearestPlant(plants) {
+    let nearest = null, minD = Infinity;
+    for (const p of plants) {
+      if (!p.alive) continue;
+      const d = Utils.dist(this.x, this.y, p.x, p.y);
+      if (d < minD) { minD = d; nearest = p; }
+    }
+    return nearest;
+  }
+}
+
+// =============================================
+// Sheep 羊 — 较慢、迟钝、群居
+// =============================================
+class Sheep extends Creature {
+  constructor(x, y) {
+    super('sheep', x, y, {
+      color: '#F5F5F0', speed: CONFIG.SHEEP_SPEED,
+      hp: 90, maxHp: 90, size: 8, symbol: 'circle',
+      maxAge: CONFIG.SHEEP_MAX_AGE_MS,
+    });
+  }
+
+  graze(tigers, allSheeps, plants) {
+    const fleeRange = CONFIG.SHEEP_FLEE_RANGE * (CONFIG.FLEE_SPEED_MULT / 1.6);
+    const threat = this._nearestThreat(tigers, fleeRange);
+    if (threat) {
+      this.smartFlee(threat.x, threat.y, this.speed * CONFIG.FLEE_SPEED_MULT, CONFIG.WIDTH, CONFIG.HEIGHT);
+      return;
+    }
+    // 预警传递
+    for (const other of allSheeps) {
+      if (other === this || !other.alive) continue;
+      const od = Math.hypot(other.x - this.x, other.y - this.y);
+      if (od < fleeRange * 0.5 && Math.hypot(other.x - other.prevX, other.y - other.prevY) > 4) {
+        this.move((other.x - this.x) / od * this.speed * 0.6, (other.y - this.y) / od * this.speed * 0.6);
+        return;
+      }
+    }
+    this._herd(allSheeps, CONFIG.SHEEP_HERD_RANGE, 0.3);
+    const plant = this._nearestPlant(plants);
+    if (plant) this.moveToward(plant.x, plant.y, this.speed * 0.7);
+    else this.moveToward(CONFIG.WIDTH / 2 + (Math.random() - 0.5) * 100,
+                        CONFIG.HEIGHT / 2 + (Math.random() - 0.5) * 100, this.speed * 0.6);
+  }
+
+  _herd(sameList, range, weight) {
+    let cx = 0, cy = 0, count = 0;
+    for (const other of sameList) {
+      if (other === this || !other.alive) continue;
+      const d = Utils.dist(this.x, this.y, other.x, other.y);
+      if (d < range) { cx += other.x; cy += other.y; count++; }
+    }
+    if (count > 0) { cx /= count; cy /= count; this.moveToward(cx, cy, this.speed * weight); }
+  }
+
+  _nearestThreat(tigers, fleeRange) {
+    let nearest = null, minD = Infinity;
+    for (const t of tigers) {
+      if (!t.alive) continue;
+      const d = Utils.dist(this.x, this.y, t.x, t.y);
+      if (d < fleeRange && d < minD) { minD = d; nearest = t; }
+    }
+    return nearest;
+  }
+
+  _nearestPlant(plants) {
+    let nearest = null, minD = Infinity;
+    for (const p of plants) {
+      if (!p.alive) continue;
+      const d = Utils.dist(this.x, this.y, p.x, p.y);
+      if (d < minD) { minD = d; nearest = p; }
+    }
+    return nearest;
+  }
+}
+
+// =============================================
+// Plant 植物 — 静态资源
+// =============================================
+class Plant {
+  constructor(x, y) {
+    this.x = x;
+    this.y = y;
+    this.alive = true;
+    this.size = 4;
+    this.regrowTimer = 0;          // 再生倒计时 (ms)
+  }
+
+  /** 被吃掉后的处理 */
+  beEaten() {
+    if (!this.alive) return;
+    this.alive = false;
+    this.regrowTimer = CONFIG.PLANT_REGROW_MS;
+  }
+
+  /** 每 tick 更新再生 */
+  update(deltaMs) {
+    if (this.alive) return;
+    this.regrowTimer -= deltaMs;
+    if (this.regrowTimer <= 0) {
+      this.alive = true;
+      this.regrowTimer = 0;
+    }
+  }
+}
+
+// =============================================
+// Ecosystem 生态系统 — 管理所有生物与核心逻辑
+// =============================================
+class Ecosystem {
+  constructor() {
+    this.tigers = [];
+    this.deers = [];
+    this.sheeps = [];
+    this.plants = [];
+    this.dayClickCount = CONFIG.MAX_CLICKS_PER_DAY;
+    this.dayTimer = 0;
+    this.tickCount = 0;
+    this.history = [];                                 // 种群历史数据（用于图表）
+    this.historyInterval = 5;                          // 每 5 tick 记录一次
+    this.running = false;
+    this.tickTimer = null;
+    this._init();
+  }
+
+  /** 初始化 / 重置生物种群 */
+  _init() {
+    this.tigers = [];
+    this.deers = [];
+    this.sheeps = [];
+    this.plants = [];
+    // 生成初始植物
+    for (let i = 0; i < CONFIG.PLANT_COUNT_INIT; i++) {
+      this.plants.push(new Plant(
+        Utils.randFloat(10, CONFIG.WIDTH - 10),
+        Utils.randFloat(10, CONFIG.HEIGHT - 10)
+      ));
+    }
+    // 生成初始老虎
+    for (let i = 0; i < CONFIG.TIGER_COUNT_INIT; i++) {
+      this.tigers.push(new Tiger(
+        Utils.randFloat(10, CONFIG.WIDTH - 10),
+        Utils.randFloat(10, CONFIG.HEIGHT - 10)
+      ));
+    }
+    // 生成初始鹿
+    for (let i = 0; i < CONFIG.DEER_COUNT_INIT; i++) {
+      this.deers.push(new Deer(
+        Utils.randFloat(10, CONFIG.WIDTH - 10),
+        Utils.randFloat(10, CONFIG.HEIGHT - 10)
+      ));
+    }
+    // 生成初始羊
+    for (let i = 0; i < CONFIG.SHEEP_COUNT_INIT; i++) {
+      this.sheeps.push(new Sheep(
+        Utils.randFloat(10, CONFIG.WIDTH - 10),
+        Utils.randFloat(10, CONFIG.HEIGHT - 10)
+      ));
+    }
+  }
+
+  /** 重置整个生态系统 */
+  reset() {
+    this.stop();
+    this._init();
+    this.dayClickCount = CONFIG.MAX_CLICKS_PER_DAY;
+    this.dayTimer = 0;
+    this.tickCount = 0;
+    this.history = [];
+  }
+
+  /** 启动模拟 */
+  start() {
+    if (this.running) return;
+    this.running = true;
+    const loop = () => {
+      if (!this.running) return;
+      this.update(CONFIG.TICK_MS);
+      this.tickTimer = setTimeout(loop, CONFIG.TICK_MS);
+    };
+    this.tickTimer = setTimeout(loop, CONFIG.TICK_MS);
+  }
+
+  /** 暂停模拟 */
+  stop() {
+    this.running = false;
+    if (this.tickTimer) {
+      clearTimeout(this.tickTimer);
+      this.tickTimer = null;
+    }
+  }
+
+  /** 切换运行/暂停 */
+  toggle() {
+    if (this.running) { this.stop(); } else { this.start(); }
+    return this.running;
+  }
+
+  /** 获取统计数据 */
+  getStats() {
+    return {
+      tiger: this.tigers.filter(t => t.alive).length,
+      deer: this.deers.filter(d => d.alive).length,
+      sheep: this.sheeps.filter(s => s.alive).length,
+      plant: this.plants.filter(p => p.alive).length,
+      tick: this.tickCount,
+    };
+  }
+
+  /**
+   * ============================================
+   * 核心：生态更新逻辑（每 tick 执行）
+   * 顺序：移动 → 捕食 → 进食 → 饥饿 → 繁殖 → 清理 → 植物再生
+   * ============================================
+   */
+  update(deltaMs) {
+    // ---- 1. 年龄 & 天计时 ----
+    this.tickCount++;
+    // 定期记录种群历史（用于动态曲线图）
+    if (this.tickCount % this.historyInterval === 0) {
+      const h = this.history;
+      h.push({ tick: this.tickCount, tiger: this.tigers.filter(t=>t.alive).length,
+        deer: this.deers.filter(d=>d.alive).length, sheep: this.sheeps.filter(s=>s.alive).length,
+        plant: this.plants.filter(p=>p.alive).length });
+      if (h.length > 200) h.splice(0, h.length - 200); // 最多保留 200 个点
+    }
+    this.dayTimer += deltaMs;
+    if (this.dayTimer >= CONFIG.DAY_MS) {
+      this.dayTimer -= CONFIG.DAY_MS;
+      this.dayClickCount = CONFIG.MAX_CLICKS_PER_DAY;
+    }
+    this.tigers.forEach(t => { if (t.alive) t.age += deltaMs; });
+    this.deers.forEach(d => { if (d.alive) d.age += deltaMs; });
+    this.sheeps.forEach(s => { if (s.alive) s.age += deltaMs; });
+
+    // ---- 2. 生物移动 ----
+    const allPrey = [...this.deers.filter(d => d.alive), ...this.sheeps.filter(s => s.alive)];
+    this.tigers.forEach(t => { if (t.alive) t.hunt(allPrey); });
+
+    const aliveTigers = this.tigers.filter(t => t.alive);
+    // 鹿：传入同类列表用于聚群行为
+    const aliveDeers = this.deers.filter(d => d.alive);
+    for (const d of aliveDeers) { d.graze(aliveTigers, this.deers, this.plants); }
+    // 羊
+    const aliveSheeps = this.sheeps.filter(s => s.alive);
+    for (const s of aliveSheeps) { s.graze(aliveTigers, this.sheeps, this.plants); }
+
+    // ---- 3. 捕食判定 ----
+    for (const tiger of this.tigers) {
+      if (!tiger.alive) continue;
+      let ate = false;
+      // 捕鹿
+      for (const deer of this.deers) {
+        if (!deer.alive) continue;
+        if (Utils.dist(tiger.x, tiger.y, deer.x, deer.y) < CONFIG.PREDATION_DIST) {
+          deer.alive = false;
+          tiger.feed();
+          SOUND.play('kill'); SOUND.play('deerDeath');
+          ate = true;
+          break;
+        }
+      }
+      if (ate) continue;
+      // 捕羊
+      for (const sheep of this.sheeps) {
+        if (!sheep.alive) continue;
+        if (Utils.dist(tiger.x, tiger.y, sheep.x, sheep.y) < CONFIG.PREDATION_DIST) {
+          sheep.alive = false;
+          tiger.feed();
+          SOUND.play('kill'); SOUND.play('sheepDeath');
+          ate = true;
+          break;
+        }
+      }
+    }
+
+    // ---- 4. 食草动物吃植物（仅 HP < 80% 时才吃，减少不必要消耗）----
+    const eatThreshold = CONFIG.EAT_HP_THRESHOLD;
+    for (const deer of this.deers) {
+      if (!deer.alive || deer.hp / deer.maxHp >= eatThreshold) continue;
+      for (const plant of this.plants) {
+        if (!plant.alive) continue;
+        if (Utils.dist(deer.x, deer.y, plant.x, plant.y) < CONFIG.EAT_PLANT_DIST) {
+          plant.beEaten(); deer.heal(12);
+          deer.isEating = true; deer.eatTimer = 8; SOUND.play('eat');
+          break;
+        }
+      }
+    }
+    for (const sheep of this.sheeps) {
+      if (!sheep.alive || sheep.hp / sheep.maxHp >= eatThreshold) continue;
+      for (const plant of this.plants) {
+        if (!plant.alive) continue;
+        if (Utils.dist(sheep.x, sheep.y, plant.x, plant.y) < CONFIG.EAT_PLANT_DIST) {
+          plant.beEaten(); sheep.heal(12);
+          sheep.isEating = true; sheep.eatTimer = 8; SOUND.play('eat');
+          break;
+        }
+      }
+    }
+
+    // ---- 5. 饥饿系统 ----
+    // 老虎：饥饿累积，极度饥饿才掉血
+    for (const t of this.tigers) { if (t.alive) t.updateHunger(); }
+    // 鹿/羊：自然消耗（鹿代谢快消耗大，羊耐饿）
+    for (const d of this.deers) { if (d.alive) d.takeDamage(CONFIG.DEER_HP_LOSS); }
+    for (const s of this.sheeps) { if (s.alive) s.takeDamage(CONFIG.SHEEP_HP_LOSS); }
+
+    // ---- 6. 衰老判定：超过寿命上限则老死 ----
+    for (const t of this.tigers) { if (t.alive && t.age > t.maxAge) t.alive = false; }
+    for (const d of this.deers) { if (d.alive && d.age > d.maxAge) d.alive = false; }
+    for (const s of this.sheeps) { if (s.alive && s.age > s.maxAge) s.alive = false; }
+
+    // ---- 7. 繁殖判定（使用各物种独立参数）----
+    this._breedCheck(this.tigers, 'tiger');
+    this._breedCheck(this.deers, 'deer');
+    this._breedCheck(this.sheeps, 'sheep');
+
+    // ---- 8. 清理死亡个体 ----
+    this.tigers = this.tigers.filter(t => t.alive);
+    this.deers = this.deers.filter(d => d.alive);
+    this.sheeps = this.sheeps.filter(s => s.alive);
+
+    // ---- 9. 生态安全网：猎物绝种时从外部迁入 ----
+    if (this.deers.length === 0) { this.deers.push(new Deer(Utils.randFloat(50, CONFIG.WIDTH-50), Utils.randFloat(50, CONFIG.HEIGHT-50))); }
+    if (this.sheeps.length === 0) { this.sheeps.push(new Sheep(Utils.randFloat(50, CONFIG.WIDTH-50), Utils.randFloat(50, CONFIG.HEIGHT-50))); }
+
+    // ---- 10. 植物再生 ----
+    for (const plant of this.plants) {
+      if (!plant.alive) plant.update(deltaMs);
+    }
+    const alivePlants = this.plants.filter(p => p.alive).length;
+    if (alivePlants < CONFIG.PLANT_MIN_COUNT) {
+      const toAdd = Math.min(2, CONFIG.MAX_PLANTS - alivePlants);
+      for (let i = 0; i < toAdd; i++) {
+        this.plants.push(new Plant(
+          Utils.randFloat(10, CONFIG.WIDTH - 10),
+          Utils.randFloat(10, CONFIG.HEIGHT - 10)
+        ));
+      }
+    }
+  }
+
+  /**
+   * 繁殖检查 — 各物种独立参数
+   * 老虎：慢繁殖、晚成熟（P 策略）
+   * 鹿：中等繁殖（K 策略）
+   * 羊：快速繁殖、早成熟（R 策略）
+   */
+  _breedCheck(speciesList, type) {
+    const alive = speciesList.filter(c => c.alive);
+    const count = alive.length;
+    const prefix = type === 'tiger' ? 'TIGER' : type === 'deer' ? 'DEER' : 'SHEEP';
+    const minCount = CONFIG[`${prefix}_BREED_MIN_COUNT`];
+    const minAge = CONFIG[`${prefix}_BREED_MIN_AGE_MS`];
+    const baseChance = CONFIG[`${prefix}_BREED_CHANCE`];
+
+    // ---- 低密度保护：快灭绝时繁殖加速（Allee 效应） ----
+    if (count <= minCount) {
+      // 种群濒危：外部迁入机制（模拟从其他区域迁移来的个体）
+      if (count <= minCount && type !== 'tiger' && Math.random() < 0.3) {
+        const nx = Utils.randFloat(50, CONFIG.WIDTH - 50);
+        const ny = Utils.randFloat(50, CONFIG.HEIGHT - 50);
+        if (type === 'deer') this.deers.push(new Deer(nx, ny));
+        else if (type === 'sheep') this.sheeps.push(new Sheep(nx, ny));
+      }
+      return;
+    }
+
+    // 密度制约 + 低密度繁殖加成
+    const densityFactor = Math.max(0, 1 - (count - minCount) / 40);
+    const lowDensityBoost = count < 6 ? 3 : count < 10 ? 2 : 1;  // 数量少时繁殖加快
+    const effectiveChance = Math.min(baseChance * densityFactor * lowDensityBoost, 0.15);
+    const maxLimit = type === 'tiger' ? 20 : 45;
+
+    for (const creature of alive) {
+      if (creature.age < minAge) continue;
+      if (Math.random() >= effectiveChance) continue;
+      if (count >= maxLimit) break;
+      const nx = Math.max(5, Math.min(CONFIG.WIDTH - 5, creature.x + Utils.randFloat(-40, 40)));
+      const ny = Math.max(5, Math.min(CONFIG.HEIGHT - 5, creature.y + Utils.randFloat(-40, 40)));
+
+      if (type === 'tiger') this.tigers.push(new Tiger(nx, ny));
+      else if (type === 'deer') this.deers.push(new Deer(nx, ny));
+      else if (type === 'sheep') this.sheeps.push(new Sheep(nx, ny));
+      break;
+    }
+  }
+
+  /** 手动添加一只鹿（用户点击地图） */
+  addDeerAt(x, y) {
+    if (this.dayClickCount <= 0) return false;  // 当日次数用完
+    if (this.deers.filter(d => d.alive).length >= 45) return false;  // 上限
+    const deer = new Deer(
+      Math.max(10, Math.min(CONFIG.WIDTH - 10, x)),
+      Math.max(10, Math.min(CONFIG.HEIGHT - 10, y))
+    );
+    this.deers.push(deer);
+    this.dayClickCount--;
+    return true;
+  }
+}
+
+// =============================================
+// Renderer 渲染器 — Canvas 绘制（背景缓存防闪烁）
+// =============================================
+class Renderer {
+  constructor(canvas) {
+    this.canvas = canvas;
+    this.ctx = canvas.getContext('2d');
+    this.width = canvas.width;
+    this.height = canvas.height;
+    // 离屏 Canvas 缓存静态背景（只画一次，避免每帧 random 闪烁）
+    this._bgCanvas = document.createElement('canvas');
+    this._bgCanvas.width = this.width;
+    this._bgCanvas.height = this.height;
+    this._buildBackground();
+  }
+
+  /** 构建静态背景（仅执行一次） */
+  _buildBackground() {
+    const ctx = this._bgCanvas.getContext('2d');
+    const W = this.width, H = this.height;
+
+    // 1. 主草地
+    ctx.fillStyle = '#3a7d32';
+    ctx.fillRect(0, 0, W, H);
+
+    // 2. 草地纹理（用固定伪随机序列替代 Math.random()，每帧一致）
+    this._drawSeeded(ctx, 400, (c, i) => {
+      const x = (i * 137.5 + 53) % W;
+      const y = (i * 97.3 + 17) % H;
+      c.fillStyle = '#2d6b26';
+      c.fillRect(x, y, 2, 2);
+    });
+    this._drawSeeded(ctx, 200, (c, i) => {
+      const x = (i * 173.1 + 29) % W;
+      const y = (i * 89.7 + 73) % H;
+      c.fillStyle = '#4a8d42';
+      c.fillRect(x, y, 1.5, 1.5);
+    });
+
+    // 3. 阳光斑块（固定位置）
+    const patches = [[120,90],[650,130],[300,340],[580,380],[200,500],[700,420],[450,180],[80,380]];
+    for (const [px, py] of patches) {
+      ctx.fillStyle = 'rgba(120,190,80,0.12)';
+      ctx.beginPath();
+      ctx.arc(px, py, 35, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // 4. 树木（固定）
+    const trees = [
+      { x: 30, y: 40 }, { x: 760, y: 55 }, { x: 15, y: 300 },
+      { x: 780, y: 250 }, { x: 50, y: 540 }, { x: 745, y: 520 },
+      { x: 400, y: 10 }, { x: 400, y: 585 },
+    ];
+    for (const t of trees) {
+      ctx.fillStyle = '#5d3a1a';
+      ctx.fillRect(t.x - 4, t.y, 8, 20);
+      ctx.fillStyle = '#2d5a1e';
+      ctx.beginPath(); ctx.arc(t.x, t.y - 2, 18, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#3a6b28';
+      ctx.beginPath(); ctx.arc(t.x + 5, t.y - 8, 14, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#4a7d35';
+      ctx.beginPath(); ctx.arc(t.x - 4, t.y - 6, 12, 0, Math.PI * 2); ctx.fill();
+    }
+
+    // 5. 小河
+    ctx.fillStyle = 'rgba(50,120,180,0.25)';
+    ctx.beginPath();
+    ctx.moveTo(0, 480);
+    ctx.quadraticCurveTo(200, 460, 400, 490);
+    ctx.quadraticCurveTo(600, 520, 800, 490);
+    ctx.lineTo(800, 530);
+    ctx.quadraticCurveTo(600, 550, 400, 520);
+    ctx.quadraticCurveTo(200, 490, 0, 510);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  /** 用种子伪随机绘制 n 次 fn，确保每次渲染一致 */
+  _drawSeeded(ctx, n, fn) {
+    for (let i = 0; i < n; i++) fn(ctx, i);
+  }
+
+  /** 基于坐标的确定性随机偏移 */
+  _plantVariation(x, y) {
+    const seed = (x * 7.31 + y * 13.17) % 1;
+    return 0.8 + Math.abs(seed) * 0.4;
+  }
+
+  /** 绘制背景（直接从缓存贴图） */
+  drawBackground() {
+    this.ctx.drawImage(this._bgCanvas, 0, 0);
+  }
+
+  /** 绘制植物 — 自然草丛（每株用坐标决定外形，不随机） */
+  drawPlants(plants) {
+    const ctx = this.ctx;
+    for (const p of plants) {
+      if (!p.alive) continue;
+      const sz = (p.size || 4) * this._plantVariation(p.x, p.y);
+      // 光晕
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, sz + 3, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(50,170,50,0.12)';
+      ctx.fill();
+      // 草叶（用坐标决定角度偏移）
+      ctx.strokeStyle = '#3a8a30';
+      ctx.lineWidth = 1.5;
+      for (let j = 0; j < 3; j++) {
+        const shift = (p.x * 3.7 + p.y * 7.3 + j * 41.9) % 1;
+        const angle = (j / 3) * Math.PI * 2 + (shift - 0.5) * 0.5;
+        ctx.beginPath();
+        ctx.moveTo(p.x, p.y);
+        ctx.lineTo(p.x + Math.cos(angle) * sz, p.y + Math.sin(angle) * sz);
+        ctx.stroke();
+      }
+      // 中心点
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 2, 0, Math.PI * 2);
+      ctx.fillStyle = '#4caf50';
+      ctx.fill();
+    }
+  }
+
+  /** 绘制生物 */
+  drawCreatures(tigers, deers, sheeps) {
+    // 鹿（先画底层）
+    for (const d of deers) {
+      if (!d.alive) continue;
+      this._drawCreature(d);
+    }
+    // 羊
+    for (const s of sheeps) {
+      if (!s.alive) continue;
+      this._drawCreature(s);
+    }
+    // 老虎（画在最上层）
+    for (const t of tigers) {
+      if (!t.alive) continue;
+      this._drawCreature(t);
+    }
+  }
+
+  /** 绘制单个生物 */
+  _drawCreature(creature) {
+    const ctx = this.ctx;
+    ctx.save();
+    const lp = creature.legPhase || 0;
+    const isEating = creature.isEating || false;
+    const eatT = creature.eatTimer || 0;
+
+    if (creature.type === 'tiger') {
+      // ================================================================
+      //   🐯 老虎 — 俯视动画风格：椭圆体、圆头、虎纹、粗腿
+      // ================================================================
+      const s = creature.size;
+      const isSprint = creature.state === 'SPRINT';
+      const dx = isSprint ? -1.5 : 0;         // 冲刺前倾
+      const x = creature.x + dx, y = creature.y;
+
+      // ---- 阴影 ----
+      ctx.shadowColor = 'rgba(0,0,0,0.15)';
+      ctx.shadowBlur = isSprint ? 14 : 8;
+
+      // ---- 后腿 ----
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = '#8B5A2B';
+      const legSwing = isSprint ? 0.8 : 0.4;
+      for (let side = -1; side <= 1; side += 2) {
+        const legOff = Math.sin(lp + (side > 0 ? 0 : Math.PI)) * legSwing * (isSprint ? 5 : 2);
+        // 后腿
+        ctx.fillRect(x - s * 0.7 + legOff * 0.3, y + s * 0.2, 4, 5 + legOff * 0.4);
+        // 前腿
+        ctx.fillRect(x + s * 0.3 - legOff * 0.3, y + s * 0.2, 4, 5 - legOff * 0.4);
+      }
+
+      // ---- 尾巴 ----
+      ctx.strokeStyle = '#3d2b1f';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(x - s * 0.5, y - s * 0.1);
+      ctx.quadraticCurveTo(x - s, y - s * 0.4, x - s * 0.6, y - s * 0.8);
+      ctx.stroke();
+
+      // ---- 身体（椭圆） ----
+      ctx.shadowColor = 'rgba(230, 126, 34, 0.3)';
+      ctx.shadowBlur = isSprint ? 12 : 6;
+      ctx.fillStyle = '#e67e22';
+      ctx.beginPath();
+      ctx.ellipse(x, y, s * 0.9, s * 0.65, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // ---- 虎纹 ----
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = '#3d2b1f';
+      for (let i = 0; i < 3; i++) {
+        const ty = y - s * 0.35 + i * s * 0.35;
+        ctx.fillRect(x - s * 0.5, ty, s * 0.25, 2.5);
+        ctx.fillRect(x + s * 0.25, ty, s * 0.25, 2.5);
+        ctx.fillRect(x - s * 0.15, ty + 3, s * 0.3, 2);
+      }
+
+      // ---- 头部（圆） ----
+      ctx.fillStyle = '#e67e22';
+      ctx.beginPath();
+      ctx.arc(x + s * 0.5, y - s * 0.1, s * 0.45, 0, Math.PI * 2);
+      ctx.fill();
+
+      // ---- 耳朵 ----
+      ctx.fillStyle = '#c06020';
+      ctx.beginPath();
+      ctx.ellipse(x + s * 0.3, y - s * 0.55, 3, 4, -0.4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.ellipse(x + s * 0.7, y - s * 0.55, 3, 4, 0.4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#f5deb3';
+      ctx.beginPath();
+      ctx.ellipse(x + s * 0.3, y - s * 0.5, 2, 2.5, -0.4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.ellipse(x + s * 0.7, y - s * 0.5, 2, 2.5, 0.4, 0, Math.PI * 2);
+      ctx.fill();
+
+      // ---- 白色面部 ----
+      ctx.fillStyle = '#f5e6c8';
+      ctx.beginPath();
+      ctx.ellipse(x + s * 0.5, y - s * 0.05, s * 0.3, s * 0.25, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // ---- 眼睛 ----
+      ctx.fillStyle = '#1a1a1a';
+      ctx.beginPath(); ctx.arc(x + s * 0.38, y - s * 0.15, 2.5, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(x + s * 0.62, y - s * 0.15, 2.5, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#fff';
+      ctx.beginPath(); ctx.arc(x + s * 0.35, y - s * 0.2, 1.2, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(x + s * 0.59, y - s * 0.2, 1.2, 0, Math.PI * 2); ctx.fill();
+
+      // ---- 鼻子 ----
+      ctx.fillStyle = '#e8848a';
+      ctx.beginPath();
+      ctx.ellipse(x + s * 0.5, y - s * 0.02, 2.5, 1.5, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // ---- 嘴巴 ----
+      ctx.strokeStyle = '#5a3a1a';
+      ctx.lineWidth = 0.8;
+      ctx.beginPath();
+      ctx.moveTo(x + s * 0.45, y + 0.02 * s);
+      ctx.lineTo(x + s * 0.5, y + 0.05 * s);
+      ctx.lineTo(x + s * 0.55, y + 0.02 * s);
+      ctx.stroke();
+
+      // ---- 冲刺特效 ----
+      if (isSprint) {
+        ctx.shadowBlur = 0;
+        ctx.strokeStyle = 'rgba(255,200,80,0.35)';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([4, 6]);
+        ctx.beginPath();
+        ctx.ellipse(x, y, s * 1.4, s * 1.1, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        // 跑动线
+        ctx.strokeStyle = 'rgba(200,150,80,0.25)';
+        ctx.lineWidth = 1;
+        for (let i = 0; i < 3; i++) {
+          const lx = x - s + i * s * 0.3;
+          ctx.beginPath();
+          ctx.moveTo(lx, y + s * 0.5);
+          ctx.lineTo(lx - 4 - i * 2, y + s * 0.5 + 5 + i * 2);
+          ctx.stroke();
+        }
+      }
+
+      // ---- HP 血条 ----
+      ctx.shadowBlur = 0;
+      const barW = s * 2, barH = 3;
+      const bx = x - barW / 2, by = y - s - 8;
+      ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      ctx.fillRect(bx - 0.5, by - 0.5, barW + 1, barH + 1);
+      ctx.fillStyle = creature.hp / creature.maxHp > 0.5 ? '#4caf50' :
+                      creature.hp / creature.maxHp > 0.25 ? '#ff9800' : '#f44336';
+      ctx.fillRect(bx, by, barW * (creature.hp / creature.maxHp), barH);
+
+    } else {
+      // ================================================================
+      //   🦌 鹿 / 🐑 羊 — 俯视动画风格：椭圆身体、圆头、短腿、吃草动作
+      // ================================================================
+      const isDeer = creature.type === 'deer';
+      const r = creature.size;
+      const headBob = isEating ? Math.sin(eatT * 1.3) * 2 : 0;
+
+      // ---- 阴影 ----
+      ctx.shadowColor = 'rgba(0,0,0,0.12)';
+      ctx.shadowBlur = 5;
+
+      // ---- 腿 ----
+      ctx.shadowBlur = 0;
+      for (let side = -1; side <= 1; side += 2) {
+        const legSw = Math.sin(lp + (side > 0 ? 0 : Math.PI)) * 2.5;
+        const legColor = isDeer ? '#6d4a2a' : '#999';
+        ctx.fillStyle = legColor;
+        // 后腿
+        ctx.fillRect(creature.x - r * 0.6 + legSw * 0.2, creature.y + r * 0.15, 3, 5 + legSw * 0.3);
+        // 前腿
+        ctx.fillRect(creature.x + r * 0.3 - legSw * 0.2, creature.y + r * 0.15, 3, 5 - legSw * 0.3);
+      }
+
+      // ---- 身体（椭圆） ----
+      ctx.fillStyle = creature.color;
+      ctx.shadowColor = 'rgba(0,0,0,0.1)';
+      ctx.shadowBlur = 4;
+      const bodyY = creature.y + headBob * 0.2;
+      ctx.beginPath();
+      ctx.ellipse(creature.x, bodyY, r * 0.75, r * 0.6, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // ---- 腹部高光 ----
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = isDeer ? '#deb887' : '#f0f0f0';
+      ctx.beginPath();
+      ctx.ellipse(creature.x, bodyY + 1, r * 0.45, r * 0.35, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // ---- 头部 ----
+      const headX = creature.x + r * 0.65;
+      const headY = bodyY - r * 0.1 + headBob * 0.5;
+      ctx.fillStyle = creature.color;
+      ctx.beginPath();
+      ctx.arc(headX, headY, r * 0.4, 0, Math.PI * 2);
+      ctx.fill();
+
+      // ---- 耳朵 ----
+      ctx.fillStyle = isDeer ? '#a0724a' : '#ccc';
+      ctx.beginPath();
+      ctx.ellipse(headX - r * 0.15, headY - r * 0.45, 2.5, 3, -0.3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.ellipse(headX + r * 0.15, headY - r * 0.45, 2.5, 3, 0.3, 0, Math.PI * 2);
+      ctx.fill();
+
+      // ---- 眼睛 ----
+      const eyeX = headX + headBob * 0.15;
+      ctx.fillStyle = '#1a1a1a';
+      ctx.beginPath(); ctx.arc(eyeX - 2.5, headY - 1, 1.8, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(eyeX + 2.5, headY - 1, 1.8, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#fff';
+      ctx.beginPath(); ctx.arc(eyeX - 2, headY - 1.5, 0.9, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(eyeX + 3, headY - 1.5, 0.9, 0, Math.PI * 2); ctx.fill();
+
+      // ---- 鼻子 ----
+      ctx.fillStyle = isDeer ? '#6d4a2a' : '#555';
+      ctx.beginPath();
+      ctx.arc(headX, headY + 2, 1.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // ---- 鹿角 ----
+      if (isDeer) {
+        const antY = headY - r * 0.4 + headBob * 0.3;
+        ctx.strokeStyle = '#5d3a1a';
+        ctx.lineWidth = 1.8;
+        ctx.lineCap = 'round';
+        // 左角
+        ctx.beginPath();
+        ctx.moveTo(headX - 2, antY);
+        ctx.lineTo(headX - 5, antY - 5);
+        ctx.moveTo(headX - 4, antY - 2.5);
+        ctx.lineTo(headX - 2, antY - 4);
+        ctx.lineTo(headX - 6, antY - 4);
+        ctx.stroke();
+        // 右角
+        ctx.beginPath();
+        ctx.moveTo(headX + 2, antY);
+        ctx.lineTo(headX + 5, antY - 5);
+        ctx.moveTo(headX + 4, antY - 2.5);
+        ctx.lineTo(headX + 2, antY - 4);
+        ctx.lineTo(headX + 6, antY - 4);
+        ctx.stroke();
+      }
+
+      // ---- 羊的卷毛 ----
+      if (!isDeer) {
+        ctx.fillStyle = '#e8e8e0';
+        const woolPos = [[0,-0.5],[0.5,-0.2],[-0.5,-0.2],[0.3,0.4],[-0.3,0.4]];
+        for (const [wx, wy] of woolPos) {
+          ctx.beginPath();
+          ctx.arc(creature.x + wx * r, bodyY + wy * r, r * 0.3, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      // ---- 尾巴 ----
+      ctx.fillStyle = isDeer ? '#f5f0e0' : '#e0e0d0';
+      ctx.beginPath();
+      ctx.arc(creature.x - r * 0.65, bodyY - r * 0.15, 3, 0, Math.PI * 2);
+      ctx.fill();
+
+      // ---- HP 血条 ----
+      ctx.shadowBlur = 0;
+      const bw = r * 1.6, bh = 3;
+      const bxx = creature.x - bw / 2, byy = bodyY - r - 6;
+      ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      ctx.fillRect(bxx - 0.5, byy - 0.5, bw + 1, bh + 1);
+      ctx.fillStyle = creature.hp / creature.maxHp > 0.5 ? '#4caf50' :
+                      creature.hp / creature.maxHp > 0.25 ? '#ff9800' : '#f44336';
+      ctx.fillRect(bxx, byy, bw * (creature.hp / creature.maxHp), bh);
+    }
+    ctx.restore();
+  }
+
+  /** 绘制种群趋势曲线图（画在 Canvas 左上角浮层） */
+  drawChart(history) {
+    if (!history || history.length < 2) return;
+    const ctx = this.ctx;
+    const W = 195, H = 155, OX = 8, OY = 8;
+
+    // ---- 背景面板 ----
+    ctx.save();
+    ctx.shadowColor = 'rgba(0,0,0,0.4)';
+    ctx.shadowBlur = 10;
+    ctx.fillStyle = 'rgba(0,0,0,0.65)';
+    ctx.beginPath();
+    ctx.roundRect(OX, OY, W, H, 8);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.roundRect(OX, OY, W, H, 8);
+    ctx.stroke();
+
+    // ---- 标题 ----
+    ctx.fillStyle = '#8bc34a';
+    ctx.font = '11px sans-serif';
+    ctx.fillText('📈 种群趋势', OX + 10, OY + 16);
+
+    // ---- 图表区域（内边距） ----
+    const pad = { top: 24, right: 10, bottom: 18, left: 32 };
+    const cx = OX + pad.left, cy = OY + pad.top;
+    const cw = W - pad.left - pad.right, ch = H - pad.top - pad.bottom;
+    const data = history.slice(-150); // 最多显示最近 150 个点
+
+    // ---- 计算纵轴范围 ----
+    let maxVal = 0;
+    for (const d of data) {
+      maxVal = Math.max(maxVal, d.tiger, d.deer, d.sheep, d.plant);
+    }
+    if (maxVal < 5) maxVal = 5;
+    // 取整到 5 的倍数
+    maxVal = Math.ceil(maxVal / 5) * 5;
+
+    // ---- 网格线 ----
+    ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+    ctx.lineWidth = 0.5;
+    for (let i = 0; i <= 4; i++) {
+      const y = cy + (ch / 4) * i;
+      ctx.beginPath();
+      ctx.moveTo(cx, y);
+      ctx.lineTo(cx + cw, y);
+      ctx.stroke();
+      // 刻度值
+      ctx.fillStyle = 'rgba(255,255,255,0.25)';
+      ctx.font = '8px sans-serif';
+      ctx.textAlign = 'right';
+      ctx.fillText(Math.round(maxVal - (maxVal / 4) * i), cx - 4, y + 3);
+    }
+
+    // ---- 绘制曲线 ----
+    const species = [
+      { key: 'tiger', color: '#e67e22', label: '虎' },
+      { key: 'deer',  color: '#d4a056', label: '鹿' },
+      { key: 'sheep', color: '#c0c0c0', label: '羊' },
+      { key: 'plant', color: '#4caf50', label: '植' },
+    ];
+
+    for (const sp of species) {
+      ctx.strokeStyle = sp.color;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      let started = false;
+      for (let i = 0; i < data.length; i++) {
+        const x = cx + (i / (data.length - 1)) * cw;
+        const val = data[i][sp.key];
+        const y = cy + ch - (val / maxVal) * ch;
+        if (!started) { ctx.moveTo(x, y); started = true; }
+        else { ctx.lineTo(x, y); }
+      }
+      ctx.stroke();
+    }
+
+    // ---- 图例 ----
+    let lx = OX + 8, ly = OY + H - 6;
+    for (const sp of species) {
+      ctx.fillStyle = sp.color;
+      ctx.fillRect(lx, ly - 2, 8, 2);
+      ctx.fillStyle = '#aaa';
+      ctx.font = '8px sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText(sp.label, lx + 10, ly + 2);
+      lx += 26;
+    }
+
+    ctx.restore();
+  }
+
+  /** 全帧渲染 */
+  render(ecosystem) {
+    this.drawBackground();
+    this.drawPlants(ecosystem.plants);
+    this.drawCreatures(ecosystem.tigers, ecosystem.deers, ecosystem.sheeps);
+    this.drawChart(ecosystem.history);
+  }
+}
+
+// =============================================
+// 主程序 — 初始化与事件绑定
+// =============================================
+(function main() {
+  const canvas = document.getElementById('ecosystemCanvas');
+  const renderer = new Renderer(canvas);
+  const eco = new Ecosystem();
+
+  // DOM 元素
+  const btnStart = document.getElementById('btnStart');
+  const btnReset = document.getElementById('btnReset');
+  const statTiger = document.getElementById('statTiger');
+  const statDeer = document.getElementById('statDeer');
+  const statSheep = document.getElementById('statSheep');
+  const statPlant = document.getElementById('statPlant');
+  const clickCountEl = document.getElementById('clickCount');
+  const statusMsg = document.getElementById('statusMsg');
+  const btnSettings = document.getElementById('btnSettings');
+  const settingsPanel = document.getElementById('settingsPanel');
+  const cfgTigers = document.getElementById('cfgTigers');
+  const cfgDeers = document.getElementById('cfgDeers');
+  const cfgSheeps = document.getElementById('cfgSheeps');
+  const cfgPlants = document.getElementById('cfgPlants');
+
+  /** 从输入框读取用户设置的初始数量 */
+  function applyUserConfig() {
+    CONFIG.TIGER_COUNT_INIT = Math.max(0, parseInt(cfgTigers.value) || 4);
+    CONFIG.DEER_COUNT_INIT = Math.max(0, parseInt(cfgDeers.value) || 12);
+    CONFIG.SHEEP_COUNT_INIT = Math.max(0, parseInt(cfgSheeps.value) || 15);
+    CONFIG.PLANT_COUNT_INIT = Math.max(0, Math.min(150, parseInt(cfgPlants.value) || 80));
+  }
+
+  /** 更新 UI 面板 */
+  function updateUI() {
+    const stats = eco.getStats();
+    statTiger.textContent = stats.tiger;
+    statDeer.textContent = stats.deer;
+    statSheep.textContent = stats.sheep;
+    statPlant.textContent = stats.plant;
+    clickCountEl.textContent = eco.dayClickCount;
+
+    // 老虎状态汇总
+    const aliveTigers = eco.tigers.filter(t => t.alive);
+    let stateSummary = '-';
+    if (aliveTigers.length > 0) {
+      const states = aliveTigers.map(t => t.state);
+      const counts = {};
+      for (const s of states) counts[s] = (counts[s] || 0) + 1;
+      const parts = [];
+      if (counts['SPRINT']) parts.push(`🏃${counts['SPRINT']}`);
+      if (counts['STALK']) parts.push(`👣${counts['STALK']}`);
+      if (counts['COOLDOWN']) parts.push(`💨${counts['COOLDOWN']}`);
+      if (counts['IDLE']) parts.push(`🌿${counts['IDLE']}`);
+      stateSummary = parts.join(' ') || '🌿';
+    }
+    document.getElementById('tigerState').textContent = stateSummary;
+
+    if (eco.running) {
+      statusMsg.textContent = `▶ Tick ${stats.tick} · 总生物 ${stats.tiger + stats.deer + stats.sheep} · 植物 ${stats.plant}`;
+    } else {
+      statusMsg.textContent = `⏸ Tick ${stats.tick} · 总生物 ${stats.tiger + stats.deer + stats.sheep} · 植物 ${stats.plant}`;
+    }
+  }
+
+  /** 主渲染循环（独立于逻辑循环，保证流畅渲染） */
+  let animFrameId = null;
+  function renderLoop() {
+    renderer.render(eco);
+    updateUI();
+    animFrameId = requestAnimationFrame(renderLoop);
+  }
+
+  // ---- 按钮事件 ----
+  btnStart.addEventListener('click', () => {
+    const running = eco.toggle();
+    btnStart.textContent = running ? '⏸ 暂停' : '▶ 继续';
+    btnStart.className = running ? 'btn-start' : 'btn-start paused';
+    statusMsg.textContent = running ? '▶ 模拟运行中...' : '⏸ 已暂停';
+    updateUI();
+  });
+
+  btnReset.addEventListener('click', () => {
+    applyUserConfig();           // 读取用户设置的初始数量
+    eco.reset();                 // 使用更新后的 CONFIG 重置
+    btnStart.textContent = '▶ 开始模拟';
+    btnStart.className = 'btn-start';
+    statusMsg.textContent = `↻ 已重置（🐯${CONFIG.TIGER_COUNT_INIT} 🦌${CONFIG.DEER_COUNT_INIT} 🐑${CONFIG.SHEEP_COUNT_INIT} 🌿${CONFIG.PLANT_COUNT_INIT}），点击「开始模拟」启动`;
+    updateUI();
+  });
+
+  // ---- 种群设置面板展开/收起 ----
+  btnSettings.addEventListener('click', () => {
+    const isOpen = settingsPanel.classList.toggle('open');
+    btnSettings.textContent = isOpen ? '⚙ 收起参数' : '⚙ 展开参数设置';
+    btnSettings.classList.toggle('active', isOpen);
+  });
+
+  // ---- 滑条控件（实时生效） ----
+  const slBreed = document.getElementById('slBreed');
+  const slSprint = document.getElementById('slSprint');
+  const slPreySpeed = document.getElementById('slPreySpeed');
+  const slRegrow = document.getElementById('slRegrow');
+  const valBreed = document.getElementById('valBreed');
+  const valSprint = document.getElementById('valSprint');
+  const valPreySpeed = document.getElementById('valPreySpeed');
+  const valRegrow = document.getElementById('valRegrow');
+
+  /** 更新所有存活猎物的速度（实时） */
+  function updatePreySpeed(mult) {
+    CONFIG.DEER_SPEED = CONFIG.DEER_SPEED_BASE * mult;
+    CONFIG.SHEEP_SPEED = CONFIG.SHEEP_SPEED_BASE * mult;
+    for (const d of eco.deers) { if (d.alive) d.speed = CONFIG.DEER_SPEED; }
+    for (const s of eco.sheeps) { if (s.alive) s.speed = CONFIG.SHEEP_SPEED; }
+  }
+
+  slBreed.addEventListener('input', () => {
+    const v = parseInt(slBreed.value) / 100;
+    CONFIG.BREED_CHANCE = v;
+    valBreed.textContent = v.toFixed(2);
+  });
+
+  slSprint.addEventListener('input', () => {
+    const v = parseInt(slSprint.value);
+    CONFIG.TIGER_SPRINT_DURATION = v;
+    valSprint.textContent = v;
+  });
+
+  slPreySpeed.addEventListener('input', () => {
+    const v = parseInt(slPreySpeed.value) / 10;
+    valPreySpeed.textContent = v.toFixed(1);
+    updatePreySpeed(v);
+    if (statusMsg) statusMsg.textContent = `🦌 猎物速度 ×${v.toFixed(1)}（已实时生效）`;
+  });
+
+  // ---- 加速滑条 ----
+  const slSpeed = document.getElementById('slSpeed');
+  const valSpeed = document.getElementById('valSpeed');
+  slSpeed.addEventListener('input', () => {
+    const v = parseInt(slSpeed.value);
+    CONFIG.TICK_MS = Math.round(300 / v);
+    valSpeed.textContent = v;
+    if (statusMsg) statusMsg.textContent = `⏱ ${v}× 速度（${CONFIG.TICK_MS}ms/tick）`;
+  });
+
+  slRegrow.addEventListener('input', () => {
+    const v = parseInt(slRegrow.value);
+    CONFIG.PLANT_REGROW_MS = v * 1000;
+    valRegrow.textContent = v;
+  });
+
+  // ---- 逃跑加速滑条 ----
+  const slFleeSpeed = document.getElementById('slFleeSpeed');
+  const valFleeSpeed = document.getElementById('valFleeSpeed');
+  slFleeSpeed.addEventListener('input', () => {
+    const v = parseInt(slFleeSpeed.value) / 10;
+    CONFIG.FLEE_SPEED_MULT = v;
+    valFleeSpeed.textContent = v.toFixed(1);
+  });
+
+  // ---- 预设按钮 ----
+  const presetBtns = document.querySelectorAll('.preset-btn');
+  const PRESETS = {
+    natural: { breed: 3, sprint: 18, preySpeed: 10, regrow: 4, fleeSpeed: 12, speed: 1 },
+    tiger:   { breed: 8, sprint: 22, preySpeed: 7,  regrow: 3, fleeSpeed: 10, speed: 1 },
+    prey:    { breed: 1, sprint: 12, preySpeed: 14, regrow: 3, fleeSpeed: 22, speed: 1 },
+  };
+
+  function applyPreset(name) {
+    const p = PRESETS[name];
+    if (!p) return;
+    // 更新滑条 UI
+    slBreed.value = p.breed;     slBreed.dispatchEvent(new Event('input'));
+    slSprint.value = p.sprint;   slSprint.dispatchEvent(new Event('input'));
+    slPreySpeed.value = p.preySpeed; slPreySpeed.dispatchEvent(new Event('input'));
+    slRegrow.value = p.regrow;   slRegrow.dispatchEvent(new Event('input'));
+    if (p.fleeSpeed !== undefined) { slFleeSpeed.value = p.fleeSpeed; slFleeSpeed.dispatchEvent(new Event('input')); }
+    if (p.speed !== undefined) { slSpeed.value = p.speed; slSpeed.dispatchEvent(new Event('input')); }
+    // 预设同步调整初始数量
+    if (name === 'prey') { cfgTigers.value = 2; cfgDeers.value = 20; cfgSheeps.value = 25; cfgPlants.value = 150; }
+    else if (name === 'tiger') { cfgTigers.value = 5; cfgDeers.value = 12; cfgSheeps.value = 12; cfgPlants.value = 80; }
+    else { cfgTigers.value = 3; cfgDeers.value = 20; cfgSheeps.value = 25; cfgPlants.value = 120; }
+    // 高亮按钮
+    presetBtns.forEach(b => b.classList.remove('active'));
+    document.querySelector(`.preset-btn[data-preset="${name}"]`).classList.add('active');
+    statusMsg.textContent = `🎯 已切换至「${name === 'natural' ? '自然平衡' : name === 'tiger' ? '老虎强势' : '猎物优势'}」预设（🐯${cfgTigers.value} 🦌${cfgDeers.value} 🐑${cfgSheeps.value} 🌿${cfgPlants.value}，重置生效）`;
+  }
+
+  presetBtns.forEach(btn => {
+    btn.addEventListener('click', () => applyPreset(btn.dataset.preset));
+  });
+
+  // ---- 音效开关 ----
+  const soundCheck = document.getElementById('soundCheck');
+  soundCheck.addEventListener('change', () => {
+    SOUND.enabled = soundCheck.checked;
+    if (soundCheck.checked) SOUND.play('test');
+  });
+
+  // ---- 点击地图添加鹿 ----
+  canvas.addEventListener('click', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    const mx = (e.clientX - rect.left) * scaleX;
+    const my = (e.clientY - rect.top) * scaleY;
+
+    // 检查点击位置是否在已有生物上（避免重叠放置）
+    const stats = eco.getStats();
+    const allAlive = [
+      ...eco.tigers.filter(t => t.alive),
+      ...eco.deers.filter(d => d.alive),
+      ...eco.sheeps.filter(s => s.alive),
+    ];
+    const tooClose = allAlive.some(c => Utils.dist(mx, my, c.x, c.y) < 25);
+    if (tooClose) {
+      statusMsg.textContent = '⚠️ 生物附近不能放置鹿';
+      return;
+    }
+
+    const added = eco.addDeerAt(mx, my);
+    if (added) {
+      statusMsg.textContent = `🦌 放生了一只鹿（本日剩余 ${eco.dayClickCount} 次）`;
+      updateUI();
+    } else {
+      if (eco.dayClickCount <= 0) {
+        statusMsg.textContent = '⚠️ 今日放生次数已用完（每30秒重置）';
+      } else {
+        statusMsg.textContent = '⚠️ 鹿的数量已达上限(45)';
+      }
+    }
+  });
+
+  // 鼠标移动时在 canvas 上显示坐标（辅助）
+  canvas.addEventListener('mousemove', (e) => {
+    // 可扩展：显示悬停信息
+  });
+
+  // ---- 启动渲染循环 ----
+  renderLoop();
+
+  // 初始绘制
+  renderer.render(eco);
+  updateUI();
+  statusMsg.textContent = `🌲 🐯${CONFIG.TIGER_COUNT_INIT} 🦌${CONFIG.DEER_COUNT_INIT} 🐑${CONFIG.SHEEP_COUNT_INIT} 🌿${CONFIG.PLANT_COUNT_INIT} · 点右侧⚙展开参数`;
+
+  console.log('🌳 自然生态模拟已初始化');
+  console.log(`   🐯 老虎: ${CONFIG.TIGER_COUNT_INIT}只（潜行-冲刺-扑击 狩猎模式）`);
+  console.log(`   🦌 鹿: ${CONFIG.DEER_COUNT_INIT}只（群居，速度${CONFIG.DEER_SPEED}，警觉范围${CONFIG.DEER_FLEE_RANGE}px）`);
+  console.log(`   🐑 羊: ${CONFIG.SHEEP_COUNT_INIT}只（群居，速度${CONFIG.SHEEP_SPEED}，警觉范围${CONFIG.SHEEP_FLEE_RANGE}px）`);
+  console.log(`   🌿 植物: ${CONFIG.PLANT_COUNT_INIT}株 · 地形: 森林+小河`);
+  console.log(`   更新: ${CONFIG.TICK_MS}ms/tick · 老虎冲刺${CONFIG.TIGER_SPRINT_DURATION}tick · 爆发距离${CONFIG.BURST_RANGE}px`);
+  console.log('   ⚙ 点击「⚙ 种群设置」可调节初始数量，重置后生效');
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+# 生态模拟游戏 — Git 忽略规则
+
+# 系统文件
+Thumbs.db
+.DS_Store
+*.swp
+*.swo
+
+# IDE
+.idea/
+.vscode/
+*.suo
+*.user
+
+# 日志
+*.log
